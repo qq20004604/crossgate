@@ -80,6 +80,22 @@ class GameCapture:
             print("frame is None")
         return None
 
+    def cache_frame(self, max=10):
+        print(f"开始缓存{max}帧")
+        tempCount = 0
+        while True:
+            frame = self.capture_frame()
+            time.sleep(0.05)
+            if frame is None:
+                continue
+            else:
+                tempCount += 1
+            # 循环10次，也就是拿10帧有效图像
+            # 写12是为了保险
+            if tempCount > max + 2:
+                print(f"{max}帧缓存完毕")
+                break
+
     def reset_cache(self):
         self.frame_cache.clear()
 
@@ -124,12 +140,12 @@ class GameCapture:
             255 if color[0] + 20 > 255 else color[0] + 20,
         )
 
-        print(lowColor)
-        print(upColor)
+        # print(lowColor)
+        # print(upColor)
         # 统计像素点数量
         pixels = cv2.inRange(region, lowColor, upColor)
         pixel_count = cv2.countNonZero(pixels)
-        print(pixel_count)
+        # print(pixel_count)
         # if pixel_count == 0:
         # 保存裁剪后的图片
         # save_path = f"./detected_regions/region_{area}.png"
@@ -150,6 +166,7 @@ class GameCapture:
 
     # 是否宠物可以行动
     def can_pet_act(self):
+        self.cache_frame(1)
         result = self._get_img_from_img(self.pet_img)
         print("can_pet_act", result)
         return result
@@ -224,12 +241,12 @@ class GameCapture:
             return (center_x, center_y)
         else:
             # 未找到匹配结果
-            print("未找到目标匹配结果")
-            save_path = f"./detected_regions/gray_source.png"
-            cv2.imwrite(save_path, gray_source)
-            save_path = f"./detected_regions/gray_target.png"
-            cv2.imwrite(save_path, gray_target)
-            print(f"区域图片已保存: {save_path}")
+            # print("未找到目标匹配结果")
+            # save_path = f"./detected_regions/gray_source.png"
+            # cv2.imwrite(save_path, gray_source)
+            # save_path = f"./detected_regions/gray_target.png"
+            # cv2.imwrite(save_path, gray_target)
+            # print(f"区域图片已保存: {save_path}")
             return False
 
     # 播放警告声
@@ -320,20 +337,7 @@ def battle_loop(capture, detector, controller):
         current_pos = pyautogui.position()
         controller._human_move(current_pos, (341, 470))
 
-        print("开始缓存10帧")
-        tempCount = 0
-        while True:
-            capture.capture_frame()
-            time.sleep(0.05)
-            if frame is None:
-                continue
-            else:
-                tempCount += 1
-            # 循环10次，也就是拿10帧有效图像
-            # 写12是为了保险
-            if tempCount > 12:
-                print("10帧缓存完毕")
-                break
+        capture.cache_frame()
 
         print("开始查找敌人")
         enemies = detector.scan_enemies()
@@ -368,6 +372,7 @@ def battle_loop(capture, detector, controller):
                 # 查看是否到宠物行动了
                 if capture.can_pet_act() is False:
                     continue
+                    # break
                 else:
                     is_pet_action = True
                     action_pos = pos
@@ -391,67 +396,68 @@ def battle_loop(capture, detector, controller):
                         print("action_pos", action_pos)
                         break
         # 如果此时还是 False，说明很可能敌人检测失败。（比如说，enemies = detector.scan_enemies() 获得值了，但前排存在怪物却没检测出来，所以点不了后排怪）
-        if is_pet_action is False:
-            # 重新点击一遍
-            print("采用特殊敌人位置捕捉法")
-            enemies = detector.scan_enemy_special()
-            frontEnemy = []
-            backEnemy = []
-            frontPos = []
-            backPos = []
-            for item in enemies:
-                if item['side'] == 'front':
-                    frontEnemy.append(item['priority'])
-                    frontPos.append(item['position'])
-                if item['side'] == 'back':
-                    backEnemy.append(item['priority'])
-                    backPos.append(item['position'])
-
-            # 按顺序点击，并检查是否到宠物行动了
-            if len(frontPos) > 0:
-                # 按顺序尝试点击
-                for pos in frontPos:
-                    # 点一下
-                    controller.safe_click(pos)
-                    time.sleep(0.2 + np.random.rand() * 1.5)
-                    # 查看是否到宠物行动了
-                    if capture.can_pet_act() is False:
-                        continue
-                    else:
-                        is_pet_action = True
-                        action_pos = pos
-                        print("action_pos", action_pos)
-                        break
-            # 如果前排没点击，那么再检查后排
-            if is_pet_action is False:
-                print("前排没有敌人")
-                if len(backPos) > 0:
-                    # 按顺序尝试点击
-                    for pos in backPos:
-                        # 点一下
-                        controller.safe_click(pos)
-                        time.sleep(0.2 + np.random.rand() * 1.5)
-                        # 查看是否到宠物行动了
-                        if capture.can_pet_act() is False:
-                            continue
-                        else:
-                            is_pet_action = True
-                            action_pos = pos
-                            print("action_pos", action_pos)
-                            break
-        # 如果还点击不了，那么就要报错一下了。播放个声音
-        if is_pet_action is False:
-            print("最终没有找到宠物可行动情况")
-            while True:
-                # 每2秒播放一次
-                capture.play_notice_voice()
-                time.sleep(2)
+        # if is_pet_action is False:
+        #     # 重新点击一遍
+        #     print("采用特殊敌人位置捕捉法")
+        #     enemies = detector.scan_enemy_special()
+        #     frontEnemy = []
+        #     backEnemy = []
+        #     frontPos = []
+        #     backPos = []
+        #     for item in enemies:
+        #         if item['side'] == 'front':
+        #             frontEnemy.append(item['priority'])
+        #             frontPos.append(item['position'])
+        #         if item['side'] == 'back':
+        #             backEnemy.append(item['priority'])
+        #             backPos.append(item['position'])
+        #
+        #     # 按顺序点击，并检查是否到宠物行动了
+        #     if len(frontPos) > 0:
+        #         # 按顺序尝试点击
+        #         for pos in frontPos:
+        #             # 点一下
+        #             controller.safe_click(pos)
+        #             time.sleep(0.2 + np.random.rand() * 1.5)
+        #             # 查看是否到宠物行动了
+        #             if capture.can_pet_act() is False:
+        #                 continue
+        #             else:
+        #                 is_pet_action = True
+        #                 action_pos = pos
+        #                 print("action_pos", action_pos)
+        #                 break
+        #     # 如果前排没点击，那么再检查后排
+        #     if is_pet_action is False:
+        #         print("前排没有敌人")
+        #         if len(backPos) > 0:
+        #             # 按顺序尝试点击
+        #             for pos in backPos:
+        #                 # 点一下
+        #                 controller.safe_click(pos)
+        #                 time.sleep(0.2 + np.random.rand() * 1.5)
+        #                 # 查看是否到宠物行动了
+        #                 if capture.can_pet_act() is False:
+        #                     continue
+        #                 else:
+        #                     is_pet_action = True
+        #                     action_pos = pos
+        #                     print("action_pos", action_pos)
+        #                     break
+        # # 如果还点击不了，那么就要报错一下了。播放个声音
+        # if is_pet_action is False:
+        #     print("最终没有找到宠物可行动情况")
+        #     while True:
+        #         # 每2秒播放一次
+        #         capture.play_notice_voice()
+        #         time.sleep(2)
 
         # 此时认为宠物可以行动了，点击一下
         time.sleep(0.5)
         controller.safe_click(action_pos)
         time.sleep(0.2 + np.random.rand() * 1.5)
         # 宠物行动完后，开始下一轮
+        break
 
 
 def main_test():
