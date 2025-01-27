@@ -34,3 +34,8 @@ class CombatController:
 
         self.last_click = time.time()
         self.click_history.append(target)
+
+    def click(self):
+        pyautogui.mouseDown()
+        time.sleep(0.1 + np.random.rand() * 0.1)
+        pyautogui.mouseUp()
